@@ -1,0 +1,11 @@
+[package]
+name = "j1939-sim"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+j1939-core = { path = "../j1939-core" }
+
+[lints]
+workspace = true

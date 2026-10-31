@@ -3,6 +3,8 @@ resolver = "2"
 members = [
     "crates/j1939-core",
     "crates/j1939-tp",
+    "crates/j1939-sim",
+    "crates/j1939-cli",
 ]
 
 [workspace.package]

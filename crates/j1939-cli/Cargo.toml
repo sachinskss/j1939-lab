@@ -1,0 +1,17 @@
+[package]
+name = "j1939-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "bam_demo"
+path = "src/main.rs"
+
+[dependencies]
+j1939-core = { path = "../j1939-core" }
+j1939-tp = { path = "../j1939-tp" }
+j1939-sim = { path = "../j1939-sim" }
+
+[lints]
+workspace = true
