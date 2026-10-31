@@ -19,6 +19,10 @@ class Message:
 class TpError(Exception):
     """Base error for protocol failures returned by the subprocess."""
 
+    @property
+    def variant(self) -> str:
+        return type(self).__name__
+
 
 class Timeout(TpError):
     pass
@@ -44,6 +48,10 @@ class ProtocolError(TpError):
     pass
 
 
+class InternalError(TpError):
+    """The subprocess crashed or returned a response the SDK cannot parse."""
+
+
 class Bus:
     def __init__(self, process: asyncio.subprocess.Process) -> None:
         self._process = process
@@ -67,7 +75,7 @@ class Bus:
         try:
             result = await asyncio.wait_for(self._pending.get(), timeout)
         except TimeoutError as exc:
-            raise Timeout(f"no message arrived within {timeout:g} seconds") from exc
+            raise asyncio.TimeoutError(f"no message arrived within {timeout:g} seconds") from exc
         if isinstance(result, BaseException):
             raise result
         return result
@@ -79,17 +87,18 @@ class Bus:
 
     async def _read_response(self) -> None:
         if self._process.stdout is None:
-            raise ProtocolError("subprocess stdout is closed")
+            raise InternalError("subprocess stdout is closed")
         line = await self._process.stdout.readline()
         if not line:
             detail = "subprocess closed its output"
             if self._process.stderr is not None:
                 detail += ": " + (await self._process.stderr.read()).decode(errors="replace")
-            raise ProtocolError(detail)
+            code = self._process.returncode
+            raise InternalError(f"subprocess exited with code {code}: {detail}")
         try:
             response: dict[str, Any] = json.loads(line)
             if response.get("version", "v1") != "v1":
-                raise ProtocolError("unsupported subprocess protocol version")
+                raise InternalError("unsupported subprocess protocol version")
             if not response.get("ok"):
                 error = response.get("error", {})
                 kind = error.get("kind", "ProtocolError")
@@ -100,6 +109,7 @@ class Bus:
                     "Aborted": Aborted,
                     "PayloadTooLarge": PayloadTooLarge,
                     "MalformedCm": MalformedCm,
+                    "InternalError": InternalError,
                 }.get(kind, ProtocolError)
                 await self._pending.put(error_type(detail))
                 return
@@ -112,15 +122,18 @@ class Bus:
                 )
             )
         except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
-            raise ProtocolError("invalid response from subprocess") from exc
+            raise InternalError("invalid response from subprocess") from exc
 
 
 async def connect(binary: str) -> Bus:
-    process = await asyncio.create_subprocess_exec(
-        binary,
-        "--stdio",
-        stdin=asyncio.subprocess.PIPE,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
+    try:
+        process = await asyncio.create_subprocess_exec(
+            binary,
+            "--stdio",
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+    except OSError as exc:
+        raise InternalError(f"could not start subprocess: {exc}") from exc
     return Bus(process)

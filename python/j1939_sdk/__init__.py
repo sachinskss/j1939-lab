@@ -1,6 +1,7 @@
 from .client import (
     Aborted,
     Bus,
+    InternalError,
     MalformedCm,
     Message,
     PayloadTooLarge,
@@ -14,6 +15,7 @@ from .client import (
 __all__ = [
     "Aborted",
     "Bus",
+    "InternalError",
     "MalformedCm",
     "Message",
     "PayloadTooLarge",
