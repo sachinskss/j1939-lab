@@ -1,0 +1,10 @@
+/target/
+/.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+pytest-cache-files-*/
+.coverage
+coverage.xml
+report.xml
