@@ -30,6 +30,7 @@ pub struct Frame {
 }
 
 impl Frame {
+    /// Builds a frame. Short data is padded, long data is truncated, and DLC is capped at eight.
     pub fn new(pgn: u32, source: u8, destination: u8, data: impl AsRef<[u8]>) -> Self {
         let bytes = data.as_ref();
         let dlc = bytes.len().min(8);

@@ -28,7 +28,7 @@ fn data_packet_count(frames: &[Frame]) -> usize {
 fn payload_zero_bytes_is_rejected_explicitly() {
     assert_eq!(
         BamTransmitter::new(0xEF00, 33, &[]).unwrap_err(),
-        TpError::MalformedCm
+        TpError::PayloadTooLarge(0)
     );
 }
 
@@ -61,6 +61,11 @@ fn payload_1785_bytes_roundtrips_in_255_dt_frames() {
     let (message, frames) = roundtrip(&payload).unwrap();
     assert_eq!(message.payload, payload);
     assert_eq!(data_packet_count(&frames), 255);
+    let cm = frames
+        .iter()
+        .find(|frame| frame.pgn() == PGN_TP_CM)
+        .unwrap();
+    assert_eq!(cm.data[3], 255);
 }
 
 #[test]

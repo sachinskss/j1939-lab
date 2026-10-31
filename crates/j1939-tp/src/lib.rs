@@ -31,6 +31,7 @@ pub enum TpError {
 impl fmt::Display for TpError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::PayloadTooLarge(0) => f.write_str("empty payload is not a valid BAM message"),
             Self::PayloadTooLarge(n) => write!(f, "payload size {n} exceeds 1785 bytes"),
             Self::SequenceMismatch { got, expected } => {
                 write!(f, "packet sequence {got}, expected {expected}")
@@ -211,7 +212,7 @@ impl BamTransmitter {
             return Err(TpError::PayloadTooLarge(payload.len()));
         }
         if payload.is_empty() {
-            return Err(TpError::MalformedCm);
+            return Err(TpError::PayloadTooLarge(0));
         }
         let packets = payload.len().div_ceil(7) as u8;
         Ok(Self {
