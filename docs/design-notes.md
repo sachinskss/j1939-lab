@@ -19,6 +19,22 @@ from Idle to Session on RTS is intentionally unimplemented and untested because
 RTS/CTS is outside the v0.1.0 scope. In an interview, describe this as the peer
 and flow-control cut, then point to the state-machine design above.
 
+## Verification cuts
+
+The local suite has 48 test functions: 40 Rust and 8 Python. The detailed list is
+in `test-coverage.md`. The 62-test estimate assumes more fault repetitions at
+the simulator, SDK, and plugin layers; those tests are not present and are not
+counted as complete.
+
+Property-based tests for arbitrary payloads, mutation testing with
+`cargo-mutants`, and real hardware tests through SocketCAN are deferred. The
+current project verifies named boundary values and state transitions on the
+virtual bus. RTS/CTS remains a v0.2.0 candidate.
+
+For an interview, state the current test count, name property-based testing,
+mutation testing, hardware, and RTS/CTS as the cuts, then show the test matrix.
+Do not describe planned cross-layer cases as passing tests.
+
 ## Address claiming
 
 The core defines the address-claimed PGN and the `Name` fields. This project does
