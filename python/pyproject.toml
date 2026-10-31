@@ -11,9 +11,12 @@ requires-python = ">=3.10"
 [project.optional-dependencies]
 test = ["pytest>=8", "pytest-asyncio>=0.23", "pytest-cov>=5"]
 
+[project.entry-points.pytest11]
+j1939_fixtures = "pytest_j1939.plugin"
+
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["j1939_sdk*"]
+include = ["j1939_sdk*", "pytest_j1939*"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
