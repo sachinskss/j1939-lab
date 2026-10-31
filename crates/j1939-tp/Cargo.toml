@@ -1,0 +1,20 @@
+[package]
+name = "j1939-tp"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+j1939-core = { path = "../j1939-core" }
+
+[dev-dependencies]
+j1939-core = { path = "../j1939-core" }
+criterion = "0.5.1"
+clap = "=4.5.20"
+
+[[bench]]
+name = "latency"
+harness = false
+
+[lints]
+workspace = true
