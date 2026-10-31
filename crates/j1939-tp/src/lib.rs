@@ -73,6 +73,10 @@ impl Reassembler {
         }
     }
 
+    pub fn active_sessions(&self) -> usize {
+        self.sessions.len()
+    }
+
     pub fn on_frame(&mut self, frame: &Frame, now: TickMillis) -> Result<Option<Message>, TpError> {
         match frame.pgn() {
             PGN_TP_CM => self.on_cm(frame, now),

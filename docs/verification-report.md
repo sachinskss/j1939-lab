@@ -2,6 +2,8 @@
 
 Status: all six Rust scenarios pass locally. The CI link remains pending until a remote run exists.
 The expected result for each row is a typed core error or the documented reset behavior.
+Detailed boundary, transition, frame-encoding, and bridge cases are listed in
+[test-coverage.md](test-coverage.md).
 
 | Scenario | Expected error | Result | CI link |
 |---|---|---|---|

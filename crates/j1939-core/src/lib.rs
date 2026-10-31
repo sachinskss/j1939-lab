@@ -10,6 +10,19 @@ pub const PGN_REQUEST: u32 = 0x00_EA00;
 pub const GLOBAL_ADDRESS: u8 = 0xFF;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum FrameError {
+    InvalidPriority(u8),
+}
+
+impl fmt::Display for FrameError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InvalidPriority(priority) => write!(f, "priority {priority} is outside 0..=7"),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Frame {
     pub id: u32,
     pub data: [u8; 8],
@@ -17,8 +30,12 @@ pub struct Frame {
 }
 
 impl Frame {
-    pub const fn new(pgn: u32, source: u8, destination: u8, data: [u8; 8]) -> Self {
-        let priority = 6u32;
+    pub fn new(pgn: u32, source: u8, destination: u8, data: impl AsRef<[u8]>) -> Self {
+        let bytes = data.as_ref();
+        let dlc = bytes.len().min(8);
+        let mut frame_data = [0; 8];
+        frame_data[..dlc].copy_from_slice(&bytes[..dlc]);
+        let priority = 7u32;
         let normalized_pgn = pgn & 0x3_FFFF;
         let pf = (normalized_pgn >> 8) & 0xFF;
         let ps = if pf < 240 {
@@ -29,9 +46,17 @@ impl Frame {
         let id = (priority << 26) | (((normalized_pgn >> 16) & 0x3) << 24) | (pf << 16) | (ps << 8);
         Self {
             id: id | source as u32,
-            data,
-            dlc: 8,
+            data: frame_data,
+            dlc: dlc as u8,
         }
+    }
+
+    pub fn with_priority(mut self, priority: u8) -> Result<Self, FrameError> {
+        if priority > 7 {
+            return Err(FrameError::InvalidPriority(priority));
+        }
+        self.id = (self.id & !(0x7 << 26)) | ((priority as u32) << 26);
+        Ok(self)
     }
 
     pub const fn from_parts(id: u32, data: [u8; 8], dlc: u8) -> Self {
@@ -136,12 +161,80 @@ mod tests {
         assert_eq!(frame.pgn(), PGN_TP_CM);
         assert_eq!(frame.source(), 33);
         assert_eq!(frame.destination(), GLOBAL_ADDRESS);
-        assert_eq!(frame.priority(), 6);
+        assert_eq!(frame.priority(), 7);
     }
 
     #[test]
     fn pdu2_pgn_keeps_group_extension() {
         let frame = Frame::new(0x00_F004, 7, GLOBAL_ADDRESS, [0; 8]);
         assert_eq!(frame.pgn(), 0x00_F004);
+    }
+
+    #[test]
+    fn frame_default_priority_is_seven() {
+        assert_eq!(Frame::new(0xEF00, 1, GLOBAL_ADDRESS, [0; 8]).priority(), 7);
+    }
+
+    #[test]
+    fn frame_custom_priority_is_preserved() {
+        let frame = Frame::new(0xEF00, 1, GLOBAL_ADDRESS, [0; 8])
+            .with_priority(3)
+            .unwrap();
+        assert_eq!(frame.priority(), 3);
+    }
+
+    #[test]
+    fn frame_rejects_priority_outside_three_bits() {
+        assert_eq!(
+            Frame::new(0xEF00, 1, GLOBAL_ADDRESS, [0; 8]).with_priority(8),
+            Err(FrameError::InvalidPriority(8))
+        );
+    }
+
+    #[test]
+    fn frame_truncates_data_over_eight_bytes() {
+        let frame = Frame::new(0xEF00, 1, GLOBAL_ADDRESS, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+        assert_eq!(frame.dlc, 8);
+        assert_eq!(frame.data, [0, 1, 2, 3, 4, 5, 6, 7]);
+    }
+
+    #[test]
+    fn frame_pads_data_under_eight_bytes() {
+        let frame = Frame::new(0xEF00, 1, GLOBAL_ADDRESS, [1, 2, 3]);
+        assert_eq!(frame.dlc, 3);
+        assert_eq!(&frame.data[3..], &[0, 0, 0, 0, 0]);
+    }
+
+    #[test]
+    fn pgn_zero_roundtrips() {
+        assert_eq!(Frame::new(0, 1, 0, [0; 8]).pgn(), 0);
+    }
+
+    #[test]
+    fn maximum_eighteen_bit_pgn_roundtrips() {
+        assert_eq!(Frame::new(0x03_FFFF, 1, 0, [0; 8]).pgn(), 0x03_FFFF);
+    }
+
+    #[test]
+    fn extended_data_page_bit_roundtrips() {
+        assert_eq!(Frame::new(0x02_0000, 1, 0, [0; 8]).pgn(), 0x02_0000);
+    }
+
+    #[test]
+    fn pdu2_destination_is_broadcast_even_when_argument_differs() {
+        assert_eq!(
+            Frame::new(0x00_FEF1, 1, 0, [0; 8]).destination(),
+            GLOBAL_ADDRESS
+        );
+    }
+
+    #[test]
+    fn pdu1_preserves_broadcast_null_and_specific_destinations() {
+        for destination in [GLOBAL_ADDRESS, 0xFE, 0x42] {
+            assert_eq!(
+                Frame::new(PGN_TP_CM, 1, destination, [0; 8]).destination(),
+                destination
+            );
+        }
     }
 }

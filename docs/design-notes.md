@@ -14,6 +14,11 @@ EndOfMessageAck, or Abort. Tests should inject lost CTS, zero-length CTS, invali
 window sizes, and timeout at each state. Hardware support is a later shell
 backend; it does not belong in `j1939-tp`.
 
+The RTS control frame is not accepted by the current receiver. The transition
+from Idle to Session on RTS is intentionally unimplemented and untested because
+RTS/CTS is outside the v0.1.0 scope. In an interview, describe this as the peer
+and flow-control cut, then point to the state-machine design above.
+
 ## Address claiming
 
 The core defines the address-claimed PGN and the `Name` fields. This project does
