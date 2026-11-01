@@ -44,7 +44,7 @@ async def test_sdk_respects_wall_clock_timeout():
 
 
 @pytest.mark.asyncio
-async def test_sdk_closes_subprocess_on_success(bus):
-    process = bus._process
-    await bus.close()
+async def test_sdk_closes_subprocess_on_success(sdk_bus):
+    process = sdk_bus._process
+    await sdk_bus.close()
     assert process.returncode is not None

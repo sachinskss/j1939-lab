@@ -1,15 +1,23 @@
-"""Generic fixtures for a simulated device and controllable faults."""
+"""Protocol-neutral fixtures for devices that send and receive messages."""
 
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 import pytest
 
-from j1939_sdk import Bus, Message, connect
+
+class Bus(Protocol):
+    """Small adapter contract; concrete transports live outside this plugin."""
+
+    async def send(
+        self, identifier: int, source: int, payload: bytes, *, fault: dict[str, Any] | None = None
+    ) -> None: ...
+
+    async def recv(self, timeout: float = 2.0) -> Any: ...
+
+    async def close(self) -> None: ...
 
 
 @dataclass
@@ -17,7 +25,15 @@ class FaultInjector:
     active: list[tuple[str, dict[str, Any]]] = field(default_factory=list)
 
     def add(self, name: str, **options: Any) -> None:
+        """Queue a generic fault request for the next device send."""
         self.active.append((name, options))
+
+    def take(self) -> dict[str, Any] | None:
+        # Consume once so a test cannot accidentally carry a fault into its next send.
+        if not self.active:
+            return None
+        name, options = self.active.pop(0)
+        return {"fault": name, **options}
 
     def clear(self) -> None:
         self.active.clear()
@@ -29,26 +45,16 @@ class SimulatedDevice:
         self.fault = fault
 
     async def send(self, identifier: int, source: int, payload: bytes) -> None:
-        await self.bus.send_bam(identifier, source, payload)
+        await self.bus.send(identifier, source, payload, fault=self.fault.take())
 
-    async def recv(self, timeout: float = 2.0) -> Message:
+    async def recv(self, timeout: float = 2.0) -> Any:
         return await self.bus.recv(timeout)
 
 
 @pytest.fixture
-async def device(fault_injector: FaultInjector) -> Any:
-    binary = os.environ.get("J1939_BAM_DEMO")
-    if not binary:
-        root = Path(__file__).resolve().parents[2]
-        candidate = root / "target" / "debug" / "bam_demo"
-        if os.name == "nt":
-            candidate = candidate.with_suffix(".exe")
-        binary = str(candidate)
-    bus = await connect(binary)
-    try:
-        yield SimulatedDevice(bus, fault_injector)
-    finally:
-        await bus.close()
+async def device(bus: Bus, fault_injector: FaultInjector):
+    """Yield a generic device over the separately provided ``bus`` fixture."""
+    yield SimulatedDevice(bus, fault_injector)
 
 
 @pytest.fixture

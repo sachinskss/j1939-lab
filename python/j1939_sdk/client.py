@@ -57,7 +57,14 @@ class Bus:
         self._process = process
         self._pending: asyncio.Queue[Message | BaseException] = asyncio.Queue()
 
-    async def send_bam(self, pgn: int, source: int, payload: bytes) -> None:
+    async def send_bam(
+        self,
+        pgn: int,
+        source: int,
+        payload: bytes,
+        *,
+        fault: dict[str, Any] | None = None,
+    ) -> None:
         if self._process.stdin is None:
             raise ProtocolError("subprocess stdin is closed")
         request = {
@@ -67,6 +74,10 @@ class Bus:
             "source": source,
             "payload": base64.b64encode(payload).decode("ascii"),
         }
+        # Keep optional controls flat in v1 so the tiny Rust bridge can parse them
+        # without embedding a second general-purpose JSON implementation.
+        if fault:
+            request.update(fault)
         self._process.stdin.write((json.dumps(request) + "\n").encode())
         await self._process.stdin.drain()
         await self._read_response()

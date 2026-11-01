@@ -1,43 +1,53 @@
 # Test coverage matrix
 
-This matrix lists the named edge tests requested for the implementation. The
-six fault scenarios remain in `crates/j1939-tp/tests/fault.rs`.
+This matrix lists named edge and fault tests. Scenario results come from the
+generated `verification-evidence` CI artifact, not from this inventory.
 
-The complete local suite contains 48 test functions: 40 Rust and 8 Python.
-This is the implemented count; the earlier 62-test budget included repeated
-fault cases across four layers that this repository does not yet implement.
+The local suite contains 68 test functions: 48 Rust and 20 Python. The six
+fault cases run at L1 (core), L2 (virtual bus), L3 (SDK), and L4 (pytest plugin).
+F1 names the no-further-frames timeout. The separate F1b test skips a middle
+packet and confirms that the next packet returns `SequenceMismatch`.
 
-| Class | Test | Layer | Result |
+| Scenario | L1 core case | L2 bus case | L3 SDK case | L4 plugin case |
+|---|---|---|---|---|
+| F1 | `f1_incomplete_session_expires_with_timeout` | `f1_fault_bus_drops_selected_packet` | `test_f1_missing_final_packet_expires_at_sdk` | `test_f1_missing_final_packet_expires_at_device` |
+| F2 | `f2_reorder_dt_frames_returns_sequence_mismatch` | `f2_fault_bus_reorders_selected_packets` | `test_f2_reordered_packets_return_sequence_error_at_sdk` | `test_f2_reordered_packets_return_sequence_error_at_device` |
+| F3 | `f3_abort_mid_stream_returns_reason` | `f3_fault_bus_replaces_next_packet_with_abort` | `test_f3_midstream_abort_preserves_reason_at_sdk` | `test_f3_midstream_abort_preserves_reason_at_device` |
+| F4 | `f4_oversized_payload_is_rejected` | `f4_cli_rejects_payload_before_bus_setup` | `test_f4_oversized_payload_is_typed_at_sdk` | `test_f4_oversized_payload_is_typed_at_device` |
+| F5 | `f5_bad_cm_size_is_malformed` | `f5_fault_bus_corrupts_announcement_packet_count` | `test_f5_invalid_announcement_is_typed_at_sdk` | `test_f5_invalid_announcement_is_typed_at_device` |
+| F6 | `f6_duplicate_cm_resets_session_and_drops_first_message` | `f6_fault_bus_broadcasts_duplicate_announcement` | `test_f6_duplicate_announcement_resets_at_sdk` | `test_f6_duplicate_announcement_resets_at_device` |
+
+| Class | Test | Layer | Inventory |
 |---|---|---|---|
-| Boundary | `payload_zero_bytes_is_rejected_explicitly` | L1 | PASS locally |
-| Boundary | `payload_one_byte_roundtrips` | L1 | PASS locally |
-| Boundary | `payload_seven_bytes_roundtrips_in_one_dt_frame` | L1 | PASS locally |
-| Boundary | `payload_eight_bytes_roundtrips_in_two_dt_frames` | L1 | PASS locally |
-| Boundary | `payload_1785_bytes_roundtrips_in_255_dt_frames` | L1 | PASS locally |
-| Boundary | `payload_1786_bytes_is_rejected` | L1 | PASS locally |
-| Boundary | `timeout_at_749_milliseconds_does_not_expire` | L1 | PASS locally |
-| Boundary | `timeout_at_750_milliseconds_expires` | L1 | PASS locally |
-| Boundary | `timeout_at_751_milliseconds_expires` | L1 | PASS locally |
-| State | `poll_before_inter_packet_interval_returns_none` | L1 | PASS locally |
-| State | `poll_after_done_returns_none` | L1 | PASS locally |
-| State | `reassembler_accepts_new_session_after_complete` | L1 | PASS locally |
-| State | `reassembler_accepts_new_session_after_timeout` | L1 | PASS locally |
-| State | `reassembler_accepts_new_session_after_abort` | L1 | PASS locally |
-| State | `reassembler_accepts_new_session_after_sequence_mismatch` | L1 | PASS locally |
-| Frame | `frame_default_priority_is_seven` | L1 | PASS locally |
-| Frame | `frame_custom_priority_is_preserved` | L1 | PASS locally |
-| Frame | `frame_rejects_priority_outside_three_bits` | L1 | PASS locally |
-| Frame | `frame_truncates_data_over_eight_bytes` | L1 | PASS locally |
-| Frame | `frame_pads_data_under_eight_bytes` | L1 | PASS locally |
-| Frame | `pgn_zero_roundtrips` | L1 | PASS locally |
-| Frame | `maximum_eighteen_bit_pgn_roundtrips` | L1 | PASS locally |
-| Frame | `extended_data_page_bit_roundtrips` | L1 | PASS locally |
-| Frame | `pdu2_destination_is_broadcast_even_when_argument_differs` | L1 | PASS locally |
-| Frame | `pdu1_preserves_broadcast_null_and_specific_destinations` | L1 | PASS locally |
-| Bridge | `sdk_handles_malformed_json_from_cli` | L3 | PASS locally |
-| Bridge | `sdk_handles_cli_crash` | L3 | PASS locally |
-| Bridge | `sdk_respects_wall_clock_timeout` | L3 | PASS locally |
-| Bridge | `sdk_closes_subprocess_on_success` | L3 | PASS locally |
+| Boundary | `payload_zero_bytes_is_rejected_explicitly` | L1 | Tracked |
+| Boundary | `payload_one_byte_roundtrips` | L1 | Tracked |
+| Boundary | `payload_seven_bytes_roundtrips_in_one_dt_frame` | L1 | Tracked |
+| Boundary | `payload_eight_bytes_roundtrips_in_two_dt_frames` | L1 | Tracked |
+| Boundary | `payload_1785_bytes_roundtrips_in_255_dt_frames` | L1 | Tracked |
+| Boundary | `payload_1786_bytes_is_rejected` | L1 | Tracked |
+| Boundary | `timeout_at_749_milliseconds_does_not_expire` | L1 | Tracked |
+| Boundary | `timeout_at_750_milliseconds_expires` | L1 | Tracked |
+| Boundary | `timeout_at_751_milliseconds_expires` | L1 | Tracked |
+| State | `poll_before_inter_packet_interval_returns_none` | L1 | Tracked |
+| State | `poll_after_done_returns_none` | L1 | Tracked |
+| State | `reassembler_accepts_new_session_after_complete` | L1 | Tracked |
+| State | `reassembler_accepts_new_session_after_timeout` | L1 | Tracked |
+| State | `reassembler_accepts_new_session_after_abort` | L1 | Tracked |
+| State | `reassembler_accepts_new_session_after_sequence_mismatch` | L1 | Tracked |
+| Frame | `frame_default_priority_is_seven` | L1 | Tracked |
+| Frame | `frame_custom_priority_is_preserved` | L1 | Tracked |
+| Frame | `frame_rejects_priority_outside_three_bits` | L1 | Tracked |
+| Frame | `frame_truncates_data_over_eight_bytes` | L1 | Tracked |
+| Frame | `frame_pads_data_under_eight_bytes` | L1 | Tracked |
+| Frame | `pgn_zero_roundtrips` | L1 | Tracked |
+| Frame | `maximum_eighteen_bit_pgn_roundtrips` | L1 | Tracked |
+| Frame | `extended_data_page_bit_roundtrips` | L1 | Tracked |
+| Frame | `pdu2_destination_is_broadcast_even_when_argument_differs` | L1 | Tracked |
+| Frame | `pdu1_preserves_broadcast_null_and_specific_destinations` | L1 | Tracked |
+| Bridge | `sdk_handles_malformed_json_from_cli` | L3 | Tracked |
+| Bridge | `sdk_handles_cli_crash` | L3 | Tracked |
+| Bridge | `sdk_respects_wall_clock_timeout` | L3 | Tracked |
+| Bridge | `sdk_closes_subprocess_on_success` | L3 | Tracked |
 
 RTS-to-session is the sole unimplemented L1 receive transition. RTS/CTS remains
 out of scope; see [design-notes.md](design-notes.md).

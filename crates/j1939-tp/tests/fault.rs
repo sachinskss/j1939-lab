@@ -21,7 +21,7 @@ fn cm(size: usize, packets: u8, pgn: u32) -> Frame {
 }
 
 #[test]
-fn f1_drop_dt_frame_expires_with_timeout() {
+fn f1_incomplete_session_expires_with_timeout() {
     let mut rx = Reassembler::new();
     rx.on_frame(&cm(20, 3, 0xEF00), TickMillis(0)).unwrap();
     let first = Frame::new(0xEB00, 33, GLOBAL_ADDRESS, [1, 1, 2, 3, 4, 5, 6, 7]);
@@ -34,6 +34,22 @@ fn f1_drop_dt_frame_expires_with_timeout() {
             source: 33,
             pgn: 0xEF00
         }]
+    );
+}
+
+#[test]
+fn f1b_dropped_middle_packet_is_reported_when_a_later_packet_arrives() {
+    let mut rx = Reassembler::new();
+    rx.on_frame(&cm(20, 3, 0xEF00), TickMillis(0)).unwrap();
+    let first = Frame::new(0xEB00, 33, GLOBAL_ADDRESS, [1, 1, 2, 3, 4, 5, 6, 7]);
+    let third = Frame::new(0xEB00, 33, GLOBAL_ADDRESS, [3, 15, 16, 17, 18, 19, 20, 21]);
+    rx.on_frame(&first, TickMillis(50)).unwrap();
+    assert_eq!(
+        rx.on_frame(&third, TickMillis(150)),
+        Err(TpError::SequenceMismatch {
+            got: 3,
+            expected: 2
+        })
     );
 }
 
@@ -82,6 +98,14 @@ fn f5_bad_cm_size_is_malformed() {
         rx.on_frame(&cm(20, 2, 0xEF00), TickMillis(0)),
         Err(TpError::MalformedCm)
     );
+    assert_eq!(rx.active_sessions(), 0);
+}
+
+#[test]
+fn f5_valid_twenty_byte_announcement_has_three_packets() {
+    let mut rx = Reassembler::new();
+    assert_eq!(rx.on_frame(&cm(20, 3, 0xEF00), TickMillis(0)), Ok(None));
+    assert_eq!(rx.active_sessions(), 1);
 }
 
 #[test]

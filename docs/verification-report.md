@@ -1,21 +1,14 @@
 # Verification report
 
-Status: all six Rust scenarios pass locally. The CI link remains pending until a remote run exists.
-The expected result for each row is a typed core error or the documented reset behavior.
-Detailed boundary, transition, frame-encoding, and bridge cases are listed in
-[test-coverage.md](test-coverage.md).
+CI generates the result table from named Rust test output and pytest JUnit XML.
+The generated report and per-scenario status files are published in the
+`verification-evidence` workflow artifact. This source document makes no test
+result claim; missing test evidence causes the report job to fail.
 
-| Scenario | Expected error | Result | CI link |
-|---|---|---|---|
-| F1: drop one TP.DT frame | `Timeout` | PASS locally | Pending |
-| F2: reorder TP.DT frames | `SequenceMismatch` | PASS locally | Pending |
-| F3: TP.CM abort mid-stream | `Aborted(3)` | PASS locally | Pending |
-| F4: 2000-byte payload | `PayloadTooLarge(2000)` | PASS locally | Pending |
-| F5: TP.CM with bad size | `MalformedCm` | PASS locally | Pending |
-| F6: duplicate BAM announcement | First session resets; second completes | PASS locally | Pending |
+Previous workflow reference supplied during review: [ci #1](https://github.com/sachinskss/j1939-lab/actions/runs/41246215720)
+(green, 1m 8s). This historical link is not used as evidence for the current
+source revision.
 
-F1 checks that a missing packet expires without a wall-clock read in the core.
-F2 checks packet ordering and typed rejection. F3 checks that the abort reason is
-preserved. F4 checks the protocol payload limit before transmission starts. F5
-checks the announced packet count against the announced size. F6 checks that a
-new announcement replaces an incomplete session from the same source.
+Scenario definitions and rationale are maintained in
+[test-coverage.md](test-coverage.md). The generated artifact reports F1–F6 at
+L1 (core), L2 (simulation bus), L3 (SDK), and L4 (pytest fixture) separately.

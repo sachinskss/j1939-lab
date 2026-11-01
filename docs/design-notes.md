@@ -21,15 +21,15 @@ and flow-control cut, then point to the state-machine design above.
 
 ## Verification cuts
 
-The local suite has 48 test functions: 40 Rust and 8 Python. The detailed list is
-in `test-coverage.md`. The 62-test estimate assumes more fault repetitions at
-the simulator, SDK, and plugin layers; those tests are not present and are not
-counted as complete.
+The local suite has 68 test functions: 48 Rust and 20 Python. Named fault cases
+run at the core, simulation bus, SDK, and pytest plugin layers. CI generates a
+scenario-by-layer report from the named Rust tests and pytest JUnit XML. See
+`test-coverage.md` for the test inventory.
 
 Property-based tests for arbitrary payloads, mutation testing with
 `cargo-mutants`, and real hardware tests through SocketCAN are deferred. The
-current project verifies named boundary values and state transitions on the
-virtual bus. RTS/CTS remains a v0.2.0 candidate.
+current project verifies named boundary values, state transitions, and fault
+behavior on the virtual bus. RTS/CTS remains a v0.2.0 candidate.
 
 For an interview, state the current test count, name property-based testing,
 mutation testing, hardware, and RTS/CTS as the cuts, then show the test matrix.

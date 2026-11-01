@@ -38,8 +38,16 @@ object per line on stdout. Requests use `version: "v1"` and
 `cmd: "send_bam"`; logs and diagnostics go to stderr. The Python test plugin
 uses generic device, bus, and fault concepts.
 
+For fault scenarios, v1 requests may include `fault` with one of `drop`,
+`reorder`, `abort`, `malformed`, or `duplicate`. `packet` selects a dropped
+packet; `after_packets` and `reason` configure an abort. The subprocess returns
+the same typed error kind produced by the reassembler.
+
 ## Scope and verification
 
-RTS/CTS and address claiming are design notes only. The verification cases and
-their status are in [docs/verification-report.md](docs/verification-report.md).
-The project does not claim hardware timing or real CAN latency.
+RTS/CTS and address claiming are design notes only. CI generates a
+scenario-by-layer verification report and status files from named Rust tests
+and pytest JUnit XML; download the `verification-evidence` artifact from the
+workflow run. [docs/verification-report.md](docs/verification-report.md)
+describes that evidence path. The project does not claim hardware timing or
+real bus latency.

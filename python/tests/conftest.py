@@ -7,7 +7,7 @@ from j1939_sdk import connect
 
 
 @pytest.fixture
-async def bus():
+async def sdk_bus():
     root = Path(__file__).resolve().parents[2]
     binary = root / "target" / "debug" / "bam_demo"
     if os.name == "nt":
