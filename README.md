@@ -1,5 +1,7 @@
 # j1939-lab
 
+[![CI](https://github.com/sachinskss/j1939-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/sachinskss/j1939-lab/actions/workflows/ci.yml)
+
 A small, deterministic Rust demonstration of J1939 frame types and BAM transport,
 with an in-memory bus, a command-line demo, and an async Python subprocess SDK.
 The core crates do not perform I/O and are compiled without `std`.

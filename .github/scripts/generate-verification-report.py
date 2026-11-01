@@ -86,6 +86,8 @@ def main() -> int:
     lines = [
         "# Verification report",
         "",
+        "## Traceability Matrix",
+        "",
         "This report is generated from named Rust test output and pytest JUnit XML.",
         "A missing test is reported as `MISSING`; it never becomes a pass by assumption.",
         "",

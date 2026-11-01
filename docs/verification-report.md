@@ -1,5 +1,7 @@
 # Verification report
 
+## Traceability Matrix
+
 CI generates the result table from named Rust test output and pytest JUnit XML.
 The generated report and per-scenario status files are published in the
 `verification-evidence` workflow artifact. This source document makes no test

@@ -75,6 +75,7 @@ def test_report_marks_pass_and_uses_current_workflow_url(tmp_path):
 
     assert result.returncode == 0, result.stderr
     report = (output / "verification-report.md").read_text(encoding="utf-8")
+    assert "## Traceability Matrix" in report
     assert "[workflow run](https://github.com/example/j1939-lab/actions/runs/12345)" in report
     assert "| F1 | `Timeout when no later packet arrives` | `PASS` | `PASS` | `PASS` | `PASS` |" in report
     assert "| F1b: middle packet dropped; later packet arrives | `SequenceMismatch` | `PASS` |" in report
