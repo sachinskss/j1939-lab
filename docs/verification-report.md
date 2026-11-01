@@ -10,5 +10,8 @@ Previous workflow reference supplied during review: [ci #1](https://github.com/s
 source revision.
 
 Scenario definitions and rationale are maintained in
-[test-coverage.md](test-coverage.md). The generated artifact reports F1–F6 at
-L1 (core), L2 (simulation bus), L3 (SDK), and L4 (pytest fixture) separately.
+[test-coverage.md](test-coverage.md). The generated artifact reports expected
+outcomes and F1–F6 at L1 (core), L2 (simulation bus plus reassembler), L3 (SDK),
+and L4 (pytest fixture) separately. It also reports F1b: a dropped middle
+packet followed by later data returns `SequenceMismatch`; F1 is the separate
+timeout case where no later packet arrives.

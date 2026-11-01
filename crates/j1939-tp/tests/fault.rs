@@ -92,7 +92,7 @@ fn f4_oversized_payload_is_rejected() {
 }
 
 #[test]
-fn f5_bad_cm_size_is_malformed() {
+fn f5_twenty_bytes_in_two_packets_is_malformed() {
     let mut rx = Reassembler::new();
     assert_eq!(
         rx.on_frame(&cm(20, 2, 0xEF00), TickMillis(0)),

@@ -21,7 +21,7 @@ and flow-control cut, then point to the state-machine design above.
 
 ## Verification cuts
 
-The local suite has 68 test functions: 48 Rust and 20 Python. Named fault cases
+The local suite has 77 test functions: 54 Rust and 23 Python. Named fault cases
 run at the core, simulation bus, SDK, and pytest plugin layers. CI generates a
 scenario-by-layer report from the named Rust tests and pytest JUnit XML. See
 `test-coverage.md` for the test inventory.

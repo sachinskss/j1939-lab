@@ -315,6 +315,7 @@ name = "j1939-sim"
 version = "0.1.0"
 dependencies = [
  "j1939-core",
+ "j1939-tp",
 ]
 
 [[package]]

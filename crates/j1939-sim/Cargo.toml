@@ -7,5 +7,8 @@ license.workspace = true
 [dependencies]
 j1939-core = { path = "../j1939-core" }
 
+[dev-dependencies]
+j1939-tp = { path = "../j1939-tp" }
+
 [lints]
 workspace = true
