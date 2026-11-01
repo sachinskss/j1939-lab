@@ -12,7 +12,7 @@ valid case announces 3 packets and opens a session.
 
 | Scenario | L1 core case | L2 bus case | L3 SDK case | L4 plugin case |
 |---|---|---|---|---|
-| F1 | `f1_incomplete_session_expires_with_timeout` | `f1_fault_bus_drops_final_packet_and_reassembler_times_out` | `test_f1_missing_final_packet_expires_at_sdk` | `test_f1_missing_final_packet_expires_at_device` |
+| F1 | `f1_incomplete_transmission_expires_with_timeout` | `f1_fault_bus_drops_final_packet_and_reassembler_times_out` | `test_f1_missing_final_packet_expires_at_sdk` | `test_f1_missing_final_packet_expires_at_device` |
 | F2 | `f2_reorder_dt_frames_returns_sequence_mismatch` | `f2_fault_bus_reorders_frames_and_reassembler_rejects_sequence` | `test_f2_reordered_packets_return_sequence_error_at_sdk` | `test_f2_reordered_packets_return_sequence_error_at_device` |
 | F3 | `f3_abort_mid_stream_returns_reason` | `f3_fault_bus_abort_is_typed_by_reassembler` | `test_f3_midstream_abort_preserves_reason_at_sdk` | `test_f3_midstream_abort_preserves_reason_at_device` |
 | F4 | `f4_oversized_payload_is_rejected` | `f4_oversized_payload_is_rejected_before_any_bus_frame` | `test_f4_oversized_payload_is_typed_at_sdk` | `test_f4_oversized_payload_is_typed_at_device` |

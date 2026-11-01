@@ -118,6 +118,8 @@ impl Reassembler {
                 let size = u16::from_le_bytes([d[1], d[2]]) as usize;
                 let packets = d[3];
                 let pgn = read_pgn(&d[5..8]);
+                // TP.DT carries seven payload bytes per frame. Reject inconsistent
+                // counts before allocating a session.
                 let expected_packets = size.div_ceil(7);
                 if size == 0
                     || size > MAX_BAM_PAYLOAD

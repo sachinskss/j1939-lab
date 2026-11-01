@@ -21,7 +21,7 @@ fn cm(size: usize, packets: u8, pgn: u32) -> Frame {
 }
 
 #[test]
-fn f1_incomplete_session_expires_with_timeout() {
+fn f1_incomplete_transmission_expires_with_timeout() {
     let mut rx = Reassembler::new();
     rx.on_frame(&cm(20, 3, 0xEF00), TickMillis(0)).unwrap();
     let first = Frame::new(0xEB00, 33, GLOBAL_ADDRESS, [1, 1, 2, 3, 4, 5, 6, 7]);
@@ -94,6 +94,7 @@ fn f4_oversized_payload_is_rejected() {
 #[test]
 fn f5_twenty_bytes_in_two_packets_is_malformed() {
     let mut rx = Reassembler::new();
+    // Twenty bytes need three seven-byte data packets, so announcing two is inconsistent.
     assert_eq!(
         rx.on_frame(&cm(20, 2, 0xEF00), TickMillis(0)),
         Err(TpError::MalformedCm)

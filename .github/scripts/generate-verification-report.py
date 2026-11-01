@@ -17,7 +17,7 @@ JUNIT = Path(sys.argv[3]) if len(sys.argv) > 3 else ROOT / "report.xml"
 # Exact test names make a missing scenario visible instead of silently treating
 # a green aggregate job as evidence for every row.
 RUST_CASES = {
-    "F1": ("f1_incomplete_session_expires_with_timeout", "f1_fault_bus_drops_final_packet_and_reassembler_times_out"),
+    "F1": ("f1_incomplete_transmission_expires_with_timeout", "f1_fault_bus_drops_final_packet_and_reassembler_times_out"),
     "F2": ("f2_reorder_dt_frames_returns_sequence_mismatch", "f2_fault_bus_reorders_frames_and_reassembler_rejects_sequence"),
     "F3": ("f3_abort_mid_stream_returns_reason", "f3_fault_bus_abort_is_typed_by_reassembler"),
     "F4": ("f4_oversized_payload_is_rejected", "f4_oversized_payload_is_rejected_before_any_bus_frame"),
