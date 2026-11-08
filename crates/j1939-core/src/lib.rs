@@ -1,16 +1,25 @@
+//! Core J1939 frame, identifier, and NAME types with no I/O dependencies.
+#![deny(missing_docs)]
 #![no_std]
 #![forbid(unsafe_code)]
 
 use core::fmt;
 
+/// PGN for J1939 transport-protocol data transfer frames.
 pub const PGN_TP_DT: u32 = 0x00_EB00;
+/// PGN for J1939 transport-protocol connection-management frames.
 pub const PGN_TP_CM: u32 = 0x00_EC00;
+/// PGN for address-claimed messages.
 pub const PGN_ADDRESS_CLAIMED: u32 = 0x00_EE00;
+/// PGN for request messages.
 pub const PGN_REQUEST: u32 = 0x00_EA00;
+/// Global destination address used for broadcast messages.
 pub const GLOBAL_ADDRESS: u8 = 0xFF;
 
+/// Errors returned when constructing or modifying a CAN frame.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum FrameError {
+    /// The requested priority is outside the valid three-bit range.
     InvalidPriority(u8),
 }
 
@@ -22,10 +31,14 @@ impl fmt::Display for FrameError {
     }
 }
 
+/// An eight-byte J1939 CAN frame and its 29-bit identifier.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Frame {
+    /// Encoded extended CAN identifier.
     pub id: u32,
+    /// Frame data, padded with zeroes when constructed from shorter input.
     pub data: [u8; 8],
+    /// Number of data bytes supplied to the constructor, capped at eight.
     pub dlc: u8,
 }
 
@@ -52,6 +65,7 @@ impl Frame {
         }
     }
 
+    /// Sets the frame priority, returning an error when it exceeds seven.
     pub fn with_priority(mut self, priority: u8) -> Result<Self, FrameError> {
         if priority > 7 {
             return Err(FrameError::InvalidPriority(priority));
@@ -60,10 +74,12 @@ impl Frame {
         Ok(self)
     }
 
+    /// Builds a frame directly from an identifier, data bytes, and DLC.
     pub const fn from_parts(id: u32, data: [u8; 8], dlc: u8) -> Self {
         Self { id, data, dlc }
     }
 
+    /// Returns this frame's Parameter Group Number.
     pub const fn pgn(&self) -> u32 {
         let pf = (self.id >> 16) & 0xFF;
         let ps = (self.id >> 8) & 0xFF;
@@ -76,10 +92,12 @@ impl Frame {
         }
     }
 
+    /// Returns the source address encoded in the identifier.
     pub const fn source(&self) -> u8 {
         self.id as u8
     }
 
+    /// Returns the destination address, or the global address for PDU2 frames.
     pub const fn destination(&self) -> u8 {
         let pf = (self.id >> 16) & 0xFF;
         if pf < 240 {
@@ -89,54 +107,72 @@ impl Frame {
         }
     }
 
+    /// Returns the three-bit priority encoded in the identifier.
     pub const fn priority(&self) -> u8 {
         ((self.id >> 26) & 0x7) as u8
     }
 }
 
+/// A 64-bit J1939-81 NAME value.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Name {
+    /// Packed NAME bits as defined by J1939-81.
     pub name: u64,
 }
 
 impl Name {
+    /// Wraps a packed NAME value.
     pub const fn new(name: u64) -> Self {
         Self { name }
     }
+    /// Returns the 21-bit identity number.
     pub const fn identity_number(self) -> u32 {
         (self.name & 0x1F_FFFF) as u32
     }
+    /// Returns the 11-bit manufacturer code.
     pub const fn manufacturer_code(self) -> u16 {
         ((self.name >> 21) & 0x7FF) as u16
     }
+    /// Returns the three-bit ECU instance.
     pub const fn ecu_instance(self) -> u8 {
         ((self.name >> 32) & 0x7) as u8
     }
+    /// Returns the five-bit function instance.
     pub const fn function_instance(self) -> u8 {
         ((self.name >> 35) & 0x1F) as u8
     }
+    /// Returns the eight-bit function code.
     pub const fn function(self) -> u8 {
         ((self.name >> 40) & 0xFF) as u8
     }
+    /// Returns the reserved NAME bit.
     pub const fn reserved(self) -> bool {
         ((self.name >> 48) & 1) != 0
     }
+    /// Returns the seven-bit vehicle-system code.
     pub const fn vehicle_system(self) -> u8 {
         ((self.name >> 49) & 0x7F) as u8
     }
+    /// Returns the four-bit vehicle-system instance.
     pub const fn vehicle_system_instance(self) -> u8 {
         ((self.name >> 56) & 0xF) as u8
     }
+    /// Returns the three-bit industry group.
     pub const fn industry_group(self) -> u8 {
         ((self.name >> 60) & 0x7) as u8
     }
+    /// Returns whether the NAME supports arbitrary addresses.
     pub const fn arbitrary_address_capable(self) -> bool {
         ((self.name >> 63) & 1) != 0
     }
 }
 
+/// Caller-supplied monotonic time in milliseconds.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct TickMillis(pub u64);
+pub struct TickMillis(
+    /// Milliseconds elapsed from the caller's chosen time origin.
+    pub u64,
+);
 
 impl fmt::Display for Frame {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

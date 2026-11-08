@@ -1,3 +1,5 @@
+//! J1939 transport-protocol BAM encoding and reassembly state machines.
+#![deny(missing_docs)]
 #![no_std]
 #![forbid(unsafe_code)]
 
@@ -11,20 +13,41 @@ const MAX_BAM_PAYLOAD: usize = 1785;
 const BAM_TIMEOUT_MS: u64 = 750;
 const PACKET_GAP_MS: u64 = 50;
 
+/// A completed J1939 transport message.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Message {
+    /// Parameter Group Number carried by the message.
     pub pgn: u32,
+    /// Address of the sending controller.
     pub source: u8,
+    /// Address of the receiving controller.
     pub destination: u8,
+    /// Reassembled message bytes.
     pub payload: Vec<u8>,
 }
 
+/// Errors reported while sending or receiving a transport message.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum TpError {
+    /// The payload is empty or exceeds the 1785-byte BAM limit.
     PayloadTooLarge(usize),
-    SequenceMismatch { got: u8, expected: u8 },
+    /// A data frame arrived with a sequence other than the next expected one.
+    SequenceMismatch {
+        /// Sequence number received from the frame.
+        got: u8,
+        /// Sequence number required by the active session.
+        expected: u8,
+    },
+    /// A peer aborted the session with the supplied reason code.
     Aborted(u8),
-    Timeout { source: u8, pgn: u32 },
+    /// An incomplete session exceeded its idle timeout.
+    Timeout {
+        /// Address of the sender whose session expired.
+        source: u8,
+        /// PGN announced by the expired session.
+        pgn: u32,
+    },
+    /// A connection-management or data frame has invalid fields.
     MalformedCm,
 }
 
@@ -58,26 +81,33 @@ struct Session {
     expected_size: usize,
     expected_packets: u8,
     next_sequence: u8,
-    payload: Vec<u8>,
+    // BAM has a protocol-defined maximum, so each open session can use fixed storage.
+    payload: [u8; MAX_BAM_PAYLOAD],
+    // Only this prefix contains received payload bytes; the remaining slots are unused.
+    len: usize,
     last_activity: TickMillis,
 }
 
+/// Reassembles incoming BAM sessions and expires idle sessions on caller-supplied time.
 #[derive(Default, Debug)]
 pub struct Reassembler {
     sessions: BTreeMap<ConnKey, Session>,
 }
 
 impl Reassembler {
+    /// Creates a reassembler with no active sessions.
     pub const fn new() -> Self {
         Self {
             sessions: BTreeMap::new(),
         }
     }
 
+    /// Returns the number of active BAM sessions.
     pub fn active_sessions(&self) -> usize {
         self.sessions.len()
     }
 
+    /// Processes a transport frame at `now`, returning a message when one completes.
     pub fn on_frame(&mut self, frame: &Frame, now: TickMillis) -> Result<Option<Message>, TpError> {
         match frame.pgn() {
             PGN_TP_CM => self.on_cm(frame, now),
@@ -86,6 +116,7 @@ impl Reassembler {
         }
     }
 
+    /// Removes sessions idle for at least the timeout and returns one error per session.
     pub fn expire_idle(&mut self, now: TickMillis) -> Vec<TpError> {
         let expired: Vec<_> = self
             .sessions
@@ -136,7 +167,8 @@ impl Reassembler {
                         expected_size: size,
                         expected_packets: packets,
                         next_sequence: 1,
-                        payload: Vec::with_capacity(size),
+                        payload: [0; MAX_BAM_PAYLOAD],
+                        len: 0,
                         last_activity: now,
                     },
                 );
@@ -167,13 +199,15 @@ impl Reassembler {
             self.sessions.remove(&key);
             return Err(TpError::SequenceMismatch { got, expected });
         }
-        let remaining = session.expected_size.saturating_sub(session.payload.len());
+        let remaining = session.expected_size.saturating_sub(session.len);
         let count = remaining.min(7);
-        session.payload.extend_from_slice(&frame.data[1..1 + count]);
+        session.payload[session.len..session.len + count]
+            .copy_from_slice(&frame.data[1..1 + count]);
+        session.len += count;
         session.next_sequence = session.next_sequence.saturating_add(1);
         session.last_activity = now;
         if got == session.expected_packets {
-            if session.payload.len() != session.expected_size {
+            if session.len != session.expected_size {
                 self.sessions.remove(&key);
                 return Err(TpError::MalformedCm);
             }
@@ -182,7 +216,8 @@ impl Reassembler {
                 pgn: session.pgn,
                 source: key.source,
                 destination: GLOBAL_ADDRESS,
-                payload: session.payload,
+                // The public message owns only the bytes actually received, not the full buffer.
+                payload: session.payload[..session.len].to_vec(),
             }));
         }
         if got > session.expected_packets {
@@ -197,6 +232,7 @@ fn read_pgn(bytes: &[u8]) -> u32 {
     bytes[0] as u32 | ((bytes[1] as u32) << 8) | ((bytes[2] as u32) << 16)
 }
 
+/// Sends a payload as a paced BAM announcement and sequence of data frames.
 #[derive(Debug)]
 pub struct BamTransmitter {
     pgn: u32,
@@ -209,6 +245,7 @@ pub struct BamTransmitter {
 }
 
 impl BamTransmitter {
+    /// Creates a transmitter for a non-empty payload up to the BAM size limit.
     pub fn new(pgn: u32, source: u8, payload: &[u8]) -> Result<Self, TpError> {
         if payload.len() > MAX_BAM_PAYLOAD {
             return Err(TpError::PayloadTooLarge(payload.len()));
@@ -228,6 +265,7 @@ impl BamTransmitter {
         })
     }
 
+    /// Returns the next frame when its inter-packet delay has elapsed.
     pub fn poll(&mut self, now: TickMillis) -> Option<Frame> {
         if self.done || self.payload.is_empty() {
             self.done = true;
@@ -280,6 +318,7 @@ impl BamTransmitter {
         Some(frame)
     }
 
+    /// Returns whether all frames in the BAM sequence have been emitted.
     pub const fn is_done(&self) -> bool {
         self.done
     }

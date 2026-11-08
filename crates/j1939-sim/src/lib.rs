@@ -1,18 +1,23 @@
+//! In-memory CAN bus and deterministic frame-fault simulation helpers.
+#![deny(missing_docs)]
 #![forbid(unsafe_code)]
 
 use j1939_core::{Frame, GLOBAL_ADDRESS, PGN_TP_CM, PGN_TP_DT};
 use std::sync::{mpsc, Arc, Mutex};
 
 #[derive(Clone, Default)]
+/// An in-memory broadcast bus for virtual CAN frames.
 pub struct VirtualBus {
     senders: Arc<Mutex<Vec<mpsc::Sender<Frame>>>>,
 }
 
 impl VirtualBus {
+    /// Creates an empty bus with no subscribers.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Adds a receiver that observes future broadcasts.
     pub fn subscribe(&self) -> mpsc::Receiver<Frame> {
         let (sender, receiver) = mpsc::channel();
         if let Ok(mut senders) = self.senders.lock() {
@@ -21,6 +26,7 @@ impl VirtualBus {
         receiver
     }
 
+    /// Sends a frame to each live subscriber.
     pub fn broadcast(&self, frame: Frame) {
         if let Ok(mut senders) = self.senders.lock() {
             senders.retain(|sender| sender.send(frame).is_ok());
@@ -31,10 +37,28 @@ impl VirtualBus {
 /// Deterministic faults applied to outgoing frames on the simulation boundary.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum FaultPlan {
-    DropPacket(u8),
-    ReorderPackets(u8, u8),
-    AbortAfter { packets: u8, reason: u8 },
+    /// Drops the data frame with the selected sequence number.
+    DropPacket(
+        /// Sequence number to drop.
+        u8,
+    ),
+    /// Sends the selected second packet before the first packet.
+    ReorderPackets(
+        /// Sequence number to hold.
+        u8,
+        /// Sequence number to send before the held packet.
+        u8,
+    ),
+    /// Replaces a later data frame with an abort after the given count.
+    AbortAfter {
+        /// Number of data frames allowed before aborting.
+        packets: u8,
+        /// Abort reason code.
+        reason: u8,
+    },
+    /// Makes the packet count in a transport announcement inconsistent.
     MalformedAnnouncement,
+    /// Broadcasts each transport announcement twice.
     DuplicateAnnouncement,
 }
 
@@ -42,6 +66,8 @@ pub enum FaultPlan {
 ///
 /// Keeping this behavior at the bus boundary lets the transmitter and
 /// reassembler run unchanged, so integration tests observe real protocol errors.
+///
+/// A configured fault is applied at most once. Later frames pass through unchanged.
 pub struct FaultBus {
     bus: VirtualBus,
     plan: FaultPlan,
@@ -51,6 +77,7 @@ pub struct FaultBus {
 }
 
 impl FaultBus {
+    /// Wraps a virtual bus with the selected fault behavior.
     pub fn new(bus: VirtualBus, plan: FaultPlan) -> Self {
         Self {
             bus,
@@ -61,6 +88,7 @@ impl FaultBus {
         }
     }
 
+    /// Applies the configured mutation and broadcasts the resulting frame sequence.
     pub fn broadcast(&mut self, mut frame: Frame) {
         if self.fault_applied {
             self.bus.broadcast(frame);
